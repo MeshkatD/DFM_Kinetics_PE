@@ -42,10 +42,10 @@ Time_prg = 900              # Total simulation time (s) for purge
 Time_hyd = 300              # Total simulation time (s) for hydrogenation 
 Time_prg2 = 120             # Total simulation time (s) for the 2nd purge 
 Nx = 5                      # Number of spatial grid points
-Nt_ads = 3000               # Number of time steps
-Nt_prg = 2000               # Number of time steps
-Nt_hyd = 5000               # Number of time steps
-Nt_prg2 = 2000              # Number of time steps
+Nt_ads = 200               # Number of time steps
+Nt_prg = 200               # Number of time steps
+Nt_hyd = 500               # Number of time steps
+Nt_prg2 = 200              # Number of time steps
 
 C_feed_ads_CO2 = 12.2       # CO2 %vol in feed gas - Adsorption stage (mmol/cm^3)  
 C_feed_ads_H2O = 0          # H2O %vol in feed gas - Adsorption stage (mmol/cm^3)
@@ -90,8 +90,8 @@ def simulate_adsorption_model(k1, k2, k3, T, P_ads, D, L, Time_ads, Nx, Nt, u, e
         
         # Diffusion terms
         if i == Nx - 1:  # Outlet boundary condition
-            diffusion_CO2 = (D * dt / epsilon) * (-C_CO2_next + C_CO2[t, i - 1]) / dx**2
-            diffusion_H2O = (D * dt / epsilon) * (-C_H2O_next + C_H2O[t, i - 1]) / dx**2
+            diffusion_CO2 = (D * dt / epsilon) * (-C_CO2_next + C_CO2[t + 1, i - 1]) / dx**2
+            diffusion_H2O = (D * dt / epsilon) * (-C_H2O_next + C_H2O[t + 1, i - 1]) / dx**2
         elif i == 1:  # Inlet boundary condition
             diffusion_CO2 = (D * dt / epsilon) * (C_CO2[t, i + 1] - C_CO2_next) / dx**2
             diffusion_H2O = (D * dt / epsilon) * (C_H2O[t, i + 1] - C_H2O_next) / dx**2
@@ -100,8 +100,8 @@ def simulate_adsorption_model(k1, k2, k3, T, P_ads, D, L, Time_ads, Nx, Nt, u, e
             diffusion_H2O = (D * dt / epsilon) * (C_H2O[t, i + 1] - 2 * C_H2O_next + C_H2O[t, i - 1]) / dx**2
 
         # Convection terms
-        convection_CO2 = - (u * dt / epsilon) * (C_CO2_next - C_CO2[t, i - 1]) / dx
-        convection_H2O = - (u * dt / epsilon) * (C_H2O_next - C_H2O[t, i - 1]) / dx
+        convection_CO2 = - (u * dt / epsilon) * (C_CO2_next - C_CO2[t + 1, i - 1]) / dx
+        convection_H2O = - (u * dt / epsilon) * (C_H2O_next - C_H2O[t + 1, i - 1]) / dx
 
         # Reaction terms
         CO2_formation_rate = - k1 * C_CO2_next * (1 - theta_CO2_next - theta_H2O_next) - k2 * C_CO2_next * theta_H2O_next
@@ -228,9 +228,9 @@ start = perf_counter()
 
 def objective(trial):
     # Variation Bounds
-    k1 = trial.suggest_int('k1', 1, 200)
-    k2 = trial.suggest_int('k2', 1, 200)
-    k3 = trial.suggest_int('k3', 19, 20)
+    k1 = trial.suggest_int('k1', 40, 60)
+    k2 = trial.suggest_int('k2', 15, 20)
+    k3 = trial.suggest_int('k3', 0.8, 1.2)
 
     params = [k1, k2, k3]
 
@@ -261,7 +261,7 @@ study = optuna.create_study(direction='minimize', sampler=sampler)
 study.enqueue_trial(initial_guess)
 
 # Create study and optimize
-study.optimize(objective, n_trials=1000, timeout=3600)  # 1 hour max
+study.optimize(objective, n_trials=10000, timeout=3600)  # 1 hour max
 
 # Extract best parameters
 best_params = study.best_params
